@@ -317,8 +317,14 @@ final class StatusItemLabelDriver {
         // finished/idle (.stopped) or .ended session must not leave a lone
         // orange glyph sitting in the menu bar — that reads as a frozen crash
         // (the user's report) since `Stop` fires at the end of every turn.
+        var showsSessionGlyph = false
         if let phase = content.sessionPhase, phase == .active || phase == .subagentsWorking {
-            parts.append(symbolImage("terminal.fill", color: NSColor(phase.color)))
+            let color = sessionGlyphColor(
+                phase: phase, theme: theme, status: content.fallbackStatus,
+                showsUsageText: content.label != nil
+            )
+            parts.append(symbolImage(sessionGlyphSymbol, color: NSColor(color)))
+            showsSessionGlyph = true
         }
 
         if let providerId = content.primaryProviderId {
@@ -333,11 +339,14 @@ final class StatusItemLabelDriver {
             parts.append(quotaImage(label, stacked: content.stacked, size: content.stackedSize,
                                     colonVisible: content.colonVisible, theme: theme))
         } else {
-            let symbolName = theme.statusBarIconName ?? fallbackIconName(for: content.fallbackStatus)
-            parts.append(symbolImage(
-                symbolName,
-                color: NSColor(theme.statusColor(for: content.fallbackStatus))
-            ))
+            if let symbolName = statusIconSymbol(
+                theme: theme, status: content.fallbackStatus, besideSessionGlyph: showsSessionGlyph
+            ) {
+                parts.append(symbolImage(
+                    symbolName,
+                    color: NSColor(theme.statusColor(for: content.fallbackStatus))
+                ))
+            }
         }
 
         for label in content.additionalLabels {
@@ -385,6 +394,43 @@ final class StatusItemLabelDriver {
         }
         icon.isTemplate = false
         return icon
+    }
+
+    /// The glyph shown while a Claude Code session is working.
+    static let sessionGlyphSymbol = "terminal.fill"
+
+    /// The symbol for the status icon drawn when there is no usage text, or
+    /// nil when the session glyph stands in for it. A theme whose icon is the
+    /// outline of the glyph (CLI's `terminal`) gets one terminal that fills in
+    /// while Claude works, instead of an outline beside a filled copy.
+    static func statusIconSymbol(theme: any AppThemeProvider, status: QuotaStatus,
+                                 besideSessionGlyph: Bool) -> String? {
+        guard let themeIcon = theme.statusBarIconName else {
+            return fallbackIconName(for: status)
+        }
+        if besideSessionGlyph, sessionGlyphFillsIn(themeIcon) {
+            return nil
+        }
+        return themeIcon
+    }
+
+    /// The session glyph's colour. It is the session phase colour, except when
+    /// the glyph stands in for the theme's status icon: that one terminal is
+    /// then the only place the quota status shows, so its shape says Claude is
+    /// working and its colour keeps saying how the quota is doing. Otherwise a
+    /// critical quota would look healthy for as long as a session runs.
+    static func sessionGlyphColor(phase: ClaudeSession.Phase, theme: any AppThemeProvider,
+                                  status: QuotaStatus, showsUsageText: Bool) -> Color {
+        guard !showsUsageText, let themeIcon = theme.statusBarIconName,
+              sessionGlyphFillsIn(themeIcon) else {
+            return phase.color
+        }
+        return theme.statusColor(for: status)
+    }
+
+    /// Whether a theme's icon is the outline of the session glyph.
+    private static func sessionGlyphFillsIn(_ themeIcon: String) -> Bool {
+        themeIcon + ".fill" == sessionGlyphSymbol
     }
 
     private static func fallbackIconName(for status: QuotaStatus) -> String {
