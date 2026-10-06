@@ -24,7 +24,7 @@ Turning the switch off removes ClaudeBar's hooks and stops the server.
 
 ## How it works
 
-- **Hooks**: turning it on adds a hook for `SessionStart`, `SessionEnd`, `UserPromptSubmit`, `Stop`, `TaskCompleted`, `SubagentStart` and `SubagentStop` to `~/.claude/settings.json`. Hooks from other tools are kept. ClaudeBar recognizes its own entries by the `__claudebar_hook` marker in the command and only ever replaces or removes those.
+- **Hooks**: turning it on adds a hook for `SessionStart`, `SessionEnd`, `UserPromptSubmit`, `Stop`, `StopFailure`, `TaskCompleted`, `SubagentStart` and `SubagentStop` to `~/.claude/settings.json`. Hooks from other tools are kept. ClaudeBar recognizes its own entries by the `__claudebar_hook` marker in the command and only ever replaces or removes those.
 - **The command**: each hook pipes Claude Code's event JSON to `curl -X POST http://localhost:<port>/hook` in the background, so it never slows Claude Code down. If ClaudeBar isn't running, the request fails silently. Sessions that ClaudeBar spawned itself (quota polls) carry a `CLAUDEBAR_PROBE` marker in their environment, and the command exits before POSTing when it sees one — polling never fires session notifications.
 - **Server and port**: ClaudeBar listens on the loopback interface only, on port **19847**, and accepts only `POST /hook`. On start it writes the port to `~/.claude/claudebar-hook-port`, which the hook reads (falling back to 19847), and deletes the file on stop.
 - **Upgrades**: at launch, if hooks are installed, ClaudeBar reinstalls them, so hook events added in newer versions register without toggling the switch.
@@ -35,6 +35,7 @@ Turning the switch off removes ClaudeBar's hooks and stops the server.
 - **The switch flips back off with an error**: ClaudeBar won't overwrite a `~/.claude/settings.json` that isn't valid JSON. Fix the file, then turn the switch on again.
 - **Port 19847 in use**: the server fails to start and the log records "Hook HTTP server failed". The `hook.port` key in `settings.json` is read but not used yet, so the port can't be changed. Free the port and restart ClaudeBar.
 - **A session card that never goes away**: a session that was killed without ending cleanly (a crash, a force-quit terminal) sends no `SessionEnd`, so its card stays until ClaudeBar restarts.
+- **A session stuck on Working after the Mac slept**: a turn that ends in an error (the connection dropped during sleep) reports `StopFailure`, not `Stop`. ClaudeBar listens to it since this version; hooks installed by an older ClaudeBar are reinstalled at launch.
 - **Done after every reply is normal**: `Stop` fires at the end of each turn, and your next prompt makes the session Working again.
 - **Nothing arrives**: check that the pane says installed, that `~/.claude/claudebar-hook-port` exists, and look for `[hooks]` lines in the [log](../../troubleshooting.md).
 

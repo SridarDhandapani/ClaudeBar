@@ -24,8 +24,9 @@ struct HookInstallerTests {
     }
 
     @Test
-    func `should listen to the seven session events Claude Code reports`() {
+    func `should listen to the eight session events Claude Code reports`() {
         let events = HookInstaller.hookEvents
+        #expect(events.contains("StopFailure"))
         #expect(events.contains("SessionStart"))
         #expect(events.contains("SessionEnd"))
         #expect(events.contains("TaskCompleted"))
@@ -33,7 +34,7 @@ struct HookInstallerTests {
         #expect(events.contains("SubagentStop"))
         #expect(events.contains("Stop"))
         #expect(events.contains("UserPromptSubmit"))
-        #expect(events.count == 7)
+        #expect(events.count == 8)
     }
 
     // MARK: - Claude Code's settings file

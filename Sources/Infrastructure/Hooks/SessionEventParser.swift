@@ -17,11 +17,15 @@ public enum SessionEventParser {
         }
 
         let cwd = json["cwd"] as? String ?? ""
+        // What the event is about, when it says: `StopFailure` carries `error`,
+        // `Notification` carries `message`.
+        let message = (json["error"] ?? json["message"]) as? String
 
         return SessionEvent(
             sessionId: sessionId,
             eventName: eventName,
-            cwd: cwd
+            cwd: cwd,
+            message: message
         )
     }
 }

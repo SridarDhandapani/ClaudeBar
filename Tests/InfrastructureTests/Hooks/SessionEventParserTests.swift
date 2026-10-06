@@ -53,6 +53,18 @@ struct SessionEventParserTests {
     }
 
     @Test
+    func `should recognise a turn that ended in an error, with what went wrong`() {
+        let json = """
+        {"session_id": "test", "hook_event_name": "StopFailure", "cwd": "/tmp", "error": "Connection error"}
+        """
+
+        let event = SessionEventParser.parse(json.data(using: .utf8)!)
+
+        #expect(event?.eventName == .stopFailure)
+        #expect(event?.message == "Connection error")
+    }
+
+    @Test
     func `should recognise a session stopping`() {
         let json = """
         {"session_id": "test", "hook_event_name": "Stop", "cwd": "/tmp"}

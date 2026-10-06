@@ -56,7 +56,7 @@ public final class SessionMonitor {
             sessions[index].subagentStarted()
         case .subagentStop:
             sessions[index].subagentStopped()
-        case .stop:
+        case .stop, .stopFailure:
             sessions[index].stop(at: event.receivedAt)
         case .userPromptSubmit:
             sessions[index].resume()
@@ -124,7 +124,7 @@ public final class SessionMonitor {
         switch event.eventName {
         case .sessionStart, .userPromptSubmit, .subagentStart, .notification:
             break
-        case .subagentStop, .taskCompleted, .stop, .sessionEnd:
+        case .subagentStop, .taskCompleted, .stop, .stopFailure, .sessionEnd:
             session.stop(at: event.receivedAt)
         }
         sessions.append(session)

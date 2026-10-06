@@ -275,6 +275,21 @@ struct SessionMonitorTests {
     // MARK: - Stop
 
     @Test
+    func `should show the session done when its turn ends in an error, as after the Mac slept`() {
+        let monitor = SessionMonitor()
+        let start = Date()
+        monitor.processEvent(makeEvent(eventName: .sessionStart, receivedAt: start))
+        monitor.processEvent(makeEvent(eventName: .subagentStart, receivedAt: start))
+
+        let failedAt = start.addingTimeInterval(3600)
+        monitor.processEvent(makeEvent(eventName: .stopFailure, receivedAt: failedAt, message: "Connection error"))
+
+        #expect(monitor.activeSession?.phase == .stopped)
+        #expect(monitor.activeSession?.activeSubagentCount == 0)
+        #expect(monitor.activeSession?.stoppedAt == failedAt)
+    }
+
+    @Test
     func `should show the session stopped with no agents when Claude stops`() {
         let monitor = SessionMonitor()
 

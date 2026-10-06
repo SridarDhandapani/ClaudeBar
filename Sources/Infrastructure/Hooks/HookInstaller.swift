@@ -30,6 +30,7 @@ public enum HookInstaller {
         "SubagentStart",
         "SubagentStop",
         "Stop",
+        "StopFailure",
         "UserPromptSubmit",
     ]
 
