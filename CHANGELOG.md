@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Leaderboard web board**: the board scrolls inside its card so the globe is close by, the globe shows the tokens its countries total, and country names in its list are no longer cut in half. ([#503](https://github.com/tddworks/ClaudeBar/pull/503)) → [docs](https://github.com/tddworks/ClaudeBar/blob/main/docs/features/leaderboard/README.md)
 
 ### Fixed
+- The popover opens scrolled to the top every time, instead of where you left it last time.
 - Every running Claude Code session is tracked, including ones started before ClaudeBar; before, only the newest one changed the status. The popover card lists each with its state, most pressing first; the menu bar follows the one that most needs you.
 - The session card names states the way the notch does — Working, Agents working, Needs you, Done — instead of Active, Needs You and Stopped.
 - A session no longer flips back to Working when Claude Code reports a subagent stopping a moment after the turn ended; it stays Done until your next prompt.
