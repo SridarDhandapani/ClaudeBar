@@ -48,6 +48,27 @@ struct PopoverContentHeightTests {
         #expect(cap == 735 - PopoverContentHeight.chrome)
     }
 
+    // MARK: - The Claude Code card
+
+    @Test
+    func `should leave room for the Claude Code card above the cards, so the action bar stays on screen`() {
+        let without = PopoverContentHeight.maxHeight(visibleScreenHeight: 982, overviewMode: false)
+        let with = PopoverContentHeight.maxHeight(visibleScreenHeight: 982, overviewMode: false, sessionCardHeight: 180)
+        #expect(with == without - 180)
+    }
+
+    @Test
+    func `should still keep the overview under its ceiling when the Claude Code card is small`() {
+        let cap = PopoverContentHeight.maxHeight(visibleScreenHeight: 982, overviewMode: true, sessionCardHeight: 60)
+        #expect(cap == 500)
+    }
+
+    @Test
+    func `should keep the smallest usable height even when the Claude Code card is tall on a short display`() {
+        let cap = PopoverContentHeight.maxHeight(visibleScreenHeight: 560, overviewMode: false, sessionCardHeight: 200)
+        #expect(cap == PopoverContentHeight.usableFloor)
+    }
+
     // MARK: - Degenerate Displays
 
     @Test

@@ -27,8 +27,15 @@ public enum PopoverContentHeight {
     ///   - visibleScreenHeight: `NSScreen.visibleFrame.height` of the
     ///     screen hosting the popover.
     ///   - overviewMode: whether the popover lists all providers.
-    public static func maxHeight(visibleScreenHeight: CGFloat, overviewMode: Bool) -> CGFloat {
-        let available = max(visibleScreenHeight - chrome, usableFloor)
+    ///   - sessionCardHeight: the Claude Code card above the scrolled cards,
+    ///     measured, with its padding; 0 when no session is running. It is
+    ///     chrome too, but its height depends on how many sessions there are.
+    public static func maxHeight(
+        visibleScreenHeight: CGFloat,
+        overviewMode: Bool,
+        sessionCardHeight: CGFloat = 0
+    ) -> CGFloat {
+        let available = max(visibleScreenHeight - chrome - sessionCardHeight, usableFloor)
         return overviewMode ? min(overviewCeiling, available) : available
     }
 }
