@@ -108,16 +108,26 @@ public final class SessionMonitor {
 
     /// The position of the event's session, adding it first if this is the
     /// first event seen from it. For a session picked up mid-flight, `startedAt`
-    /// is when ClaudeBar first heard from it, not when it really began.
+    /// is when ClaudeBar first heard from it, not when it really began, and it
+    /// starts out stopped unless the event itself shows a turn underway: a
+    /// late `SubagentStop` or `TaskCompleted` says nothing about that, and
+    /// claiming "Working" would stick until the next prompt.
     private func indexOfSession(for event: SessionEvent) -> Int {
         if let index = sessions.firstIndex(where: { $0.id == event.sessionId }) {
             return index
         }
-        sessions.append(ClaudeSession(
+        var session = ClaudeSession(
             id: event.sessionId,
             cwd: event.cwd,
             startedAt: event.receivedAt
-        ))
+        )
+        switch event.eventName {
+        case .sessionStart, .userPromptSubmit, .subagentStart, .notification:
+            break
+        case .subagentStop, .taskCompleted, .stop, .sessionEnd:
+            session.stop(at: event.receivedAt)
+        }
+        sessions.append(session)
         return sessions.count - 1
     }
 

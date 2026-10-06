@@ -102,6 +102,24 @@ struct SessionMonitorTests {
     }
 
     @Test
+    func `should pick up a session as done when its first event does not show a turn underway`() {
+        // A SubagentStop or TaskCompleted says nothing about whether the turn
+        // is still going; claiming "Working" would stick until the next prompt.
+        let monitor = SessionMonitor()
+
+        monitor.processEvent(makeEvent(sessionId: "late-agent", eventName: .subagentStop))
+        monitor.processEvent(makeEvent(sessionId: "late-task", eventName: .taskCompleted))
+        monitor.processEvent(makeEvent(sessionId: "prompted", eventName: .userPromptSubmit))
+        monitor.processEvent(makeEvent(sessionId: "agent", eventName: .subagentStart))
+
+        #expect(session("late-agent", in: monitor)?.phase == .stopped)
+        #expect(session("late-task", in: monitor)?.phase == .stopped)
+        #expect(session("late-task", in: monitor)?.completedTaskCount == 1)
+        #expect(session("prompted", in: monitor)?.phase == .active)
+        #expect(session("agent", in: monitor)?.phase == .subagentsWorking)
+    }
+
+    @Test
     func `should keep following an earlier session after a newer one starts`() {
         let monitor = SessionMonitor()
         monitor.processEvent(makeEvent(sessionId: "session-1", eventName: .sessionStart))

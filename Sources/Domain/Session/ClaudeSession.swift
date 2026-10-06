@@ -69,11 +69,16 @@ public struct ClaudeSession: Sendable, Equatable, Identifiable {
         updatePhase()
     }
 
-    /// Records a subagent stopping work
+    /// Records a subagent stopping work. Only changes the phase while agents
+    /// were what defined it: Claude Code reports a subagent's stop a moment
+    /// after the turn's own `Stop`, and that must not revive a stopped session
+    /// or release one waiting on the person.
     public mutating func subagentStopped() {
         guard phase != .ended else { return }
         activeSubagentCount = max(0, activeSubagentCount - 1)
-        updatePhase()
+        if phase == .subagentsWorking {
+            updatePhase()
+        }
     }
 
     /// Revives a stopped/idle session when a new turn begins (UserPromptSubmit).

@@ -72,6 +72,34 @@ struct ClaudeSessionTests {
     }
 
     @Test
+    func `should stay stopped when a subagent reports stopping after Claude stopped`() {
+        // Claude Code reports a subagent's stop a moment after the turn's own
+        // Stop; that must not make an idle session look like it is working.
+        var session = ClaudeSession(id: "test", cwd: "/tmp")
+        session.subagentStarted()
+        let stoppedAt = Date()
+        session.stop(at: stoppedAt)
+
+        session.subagentStopped()
+
+        #expect(session.phase == .stopped)
+        #expect(session.stoppedAt == stoppedAt)
+        #expect(session.activeSubagentCount == 0)
+    }
+
+    @Test
+    func `should keep needing the person, with the prompt, when a subagent stops`() {
+        var session = ClaudeSession(id: "test", cwd: "/tmp")
+        session.subagentStarted()
+        session.awaitInput("Claude needs your permission to use Bash")
+
+        session.subagentStopped()
+
+        #expect(session.phase == .awaitingInput)
+        #expect(session.pendingPrompt == "Claude needs your permission to use Bash")
+    }
+
+    @Test
     func `should count each finished task`() {
         var session = ClaudeSession(id: "test", cwd: "/tmp")
 
