@@ -36,7 +36,8 @@ Turning the switch off removes ClaudeBar's hooks and stops the server.
 - **Port 19847 in use**: the server fails to start and the log records "Hook HTTP server failed". The `hook.port` key in `settings.json` is read but not used yet, so the port can't be changed. Free the port and restart ClaudeBar.
 - **A session that was killed lingers for up to 30 seconds**: a crash or a force-quit terminal sends no `SessionEnd`. The hook tells ClaudeBar which Claude Code process it runs in, and every 30 seconds ClaudeBar ends sessions whose process is gone. Hooks installed by an older ClaudeBar don't send it; ClaudeBar reinstalls them at launch, and sessions started after that are covered.
 - **A session stuck on Working after the Mac slept**: a turn that ends in an error (the connection dropped during sleep) reports `StopFailure`, not `Stop`. ClaudeBar listens to it since this version; hooks installed by an older ClaudeBar are reinstalled at launch.
-- **Done after every reply is normal**: `Stop` fires at the end of each turn, and your next prompt makes the session Working again.
+- **Done after every reply is normal**: `Stop` fires at the end of each turn, and your next prompt makes the session Working again. A session that has just opened is Done too, until its first prompt.
+- **Working after you interrupted a turn**: Claude Code fires no `Stop` when you interrupt with Esc or Ctrl-C, so the session stays Working until your next prompt.
 - **Nothing arrives**: check that the pane says installed, that `~/.claude/claudebar-hook-port` exists, and look for `[hooks]` lines in the [log](../../troubleshooting.md).
 
 ## See also

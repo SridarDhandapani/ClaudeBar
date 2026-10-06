@@ -48,7 +48,9 @@ struct SessionMonitorTests {
     }
 
     @Test
-    func `should show an active session in its folder when Claude Code starts one`() {
+    func `should show a session in its folder, idle until the first prompt, when Claude Code starts one`() {
+        // A session that has just opened sits at its prompt; it is not working,
+        // and it has not finished anything either, so the notch has nothing to flash.
         let monitor = SessionMonitor()
 
         monitor.processEvent(makeEvent(eventName: .sessionStart))
@@ -56,8 +58,30 @@ struct SessionMonitorTests {
         #expect(monitor.activeSession != nil)
         #expect(monitor.activeSession?.id == "test-session")
         #expect(monitor.activeSession?.cwd == "/tmp/project")
-        #expect(monitor.activeSession?.phase == .active)
+        #expect(monitor.activeSession?.phase == .stopped)
+        #expect(monitor.activeSession?.finishedAt == nil)
         #expect(monitor.hasActiveSession == true)
+    }
+
+    @Test
+    func `should show the session working once the person sends the first prompt`() {
+        let monitor = SessionMonitor()
+        monitor.processEvent(makeEvent(eventName: .sessionStart))
+
+        monitor.processEvent(makeEvent(eventName: .userPromptSubmit))
+
+        #expect(monitor.activeSession?.phase == .active)
+    }
+
+    @Test
+    func `should keep a working session working when Claude Code starts it again mid-turn, as on compaction`() {
+        let monitor = SessionMonitor()
+        monitor.processEvent(makeEvent(eventName: .sessionStart))
+        monitor.processEvent(makeEvent(eventName: .userPromptSubmit))
+
+        monitor.processEvent(makeEvent(eventName: .sessionStart))
+
+        #expect(monitor.activeSession?.phase == .active)
     }
 
     @Test
@@ -158,6 +182,7 @@ struct SessionMonitorTests {
     func `should show a working session ahead of a stopped one that spoke last`() {
         let monitor = SessionMonitor()
         monitor.processEvent(makeEvent(sessionId: "busy", eventName: .sessionStart))
+        monitor.processEvent(makeEvent(sessionId: "busy", eventName: .userPromptSubmit))
         monitor.processEvent(makeEvent(sessionId: "idle", eventName: .sessionStart))
 
         monitor.processEvent(makeEvent(sessionId: "idle", eventName: .stop))
@@ -356,6 +381,7 @@ struct SessionMonitorTests {
         let monitor = SessionMonitor()
 
         monitor.processEvent(makeEvent(sessionId: "session-1", eventName: .sessionStart))
+        monitor.processEvent(makeEvent(sessionId: "session-1", eventName: .userPromptSubmit))
         monitor.processEvent(makeEvent(sessionId: "other", eventName: .stop))
 
         #expect(session("session-1", in: monitor)?.phase == .active)
@@ -425,8 +451,9 @@ struct SessionMonitorTests {
     func `should follow a session through subagents and tasks and keep its task count once it ends`() {
         let monitor = SessionMonitor()
 
-        // Start session
+        // Start session and send the first prompt
         monitor.processEvent(makeEvent(eventName: .sessionStart))
+        monitor.processEvent(makeEvent(eventName: .userPromptSubmit))
         #expect(monitor.activeSession?.phase == .active)
 
         // Work with subagents
@@ -469,6 +496,7 @@ struct SessionMonitorTests {
     func `should keep the session active when another session asks for permission`() {
         let monitor = SessionMonitor()
         monitor.processEvent(makeEvent(eventName: .sessionStart))
+        monitor.processEvent(makeEvent(eventName: .userPromptSubmit))
 
         monitor.processEvent(makeEvent(sessionId: "other", eventName: .notification, message: "blocked"))
 

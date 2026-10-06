@@ -17,10 +17,14 @@ struct SessionsCardView: View {
     @Environment(\.appTheme) private var theme
 
     var body: some View {
-        if sessionMonitor.sessions.count == 1, let session = sessionMonitor.activeSession {
-            SessionIndicatorView(session: session)
-        } else {
-            manySessions
+        // The durations read the clock, which no observable change drives;
+        // ticking once a second keeps them moving while the popover is open.
+        TimelineView(.periodic(from: .now, by: 1)) { _ in
+            if sessionMonitor.sessions.count == 1, let session = sessionMonitor.activeSession {
+                SessionIndicatorView(session: session)
+            } else {
+                manySessions
+            }
         }
     }
 

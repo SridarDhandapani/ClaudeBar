@@ -16,6 +16,19 @@ struct ClaudeSessionTests {
     }
 
     @Test
+    func `should be idle, with nothing finished, when opened at its prompt`() {
+        let session = ClaudeSession(id: "test", cwd: "/tmp", phase: .stopped)
+
+        #expect(session.phase == .stopped)
+        #expect(session.finishedAt == nil)
+        #expect(session.isActive == true)
+        #expect(session.activeSubagentCount == 0)
+        #expect(session.completedTaskCount == 0)
+        #expect(session.isActive == true)
+        #expect(session.endedAt == nil)
+    }
+
+    @Test
     func `should show agents working when a subagent starts`() {
         var session = ClaudeSession(id: "test", cwd: "/tmp")
 

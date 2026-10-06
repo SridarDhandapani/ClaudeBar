@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The popover opens scrolled to the top every time, instead of where you left it last time.
 - Every running Claude Code session is tracked, including ones started before ClaudeBar; before, only the newest one changed the status. The popover card lists each with its state, most pressing first; the menu bar follows the one that most needs you.
 - The session card names states the way the notch does — Working, Agents working, Needs you, Done — instead of Active, Needs You and Stopped.
+- A Claude Code session that has just opened, or been resumed, shows Done until you send it a prompt instead of Working; and the durations in the session card now tick while the popover is open.
 - A session no longer flips back to Working when Claude Code reports a subagent stopping a moment after the turn ended; it stays Done until your next prompt.
 - A session whose turn ended in an error (the connection dropped while the Mac slept, say) now shows Done instead of staying on Working: ClaudeBar listens to Claude Code's `StopFailure` hook.
 - A Claude Code session that was killed without ending cleanly (a crash, a closed terminal) is dropped within 30 seconds instead of staying until ClaudeBar restarts.

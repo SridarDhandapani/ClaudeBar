@@ -48,9 +48,10 @@ public final class SessionMonitor {
 
         switch event.eventName {
         case .sessionStart:
-            // Also fires for a session that is already running (resume, compaction),
-            // which must keep its progress.
-            sessions[index].resume()
+            // A new session sits idle at its prompt until the first prompt; one
+            // already known is being resumed or compacted and keeps its phase
+            // and progress — compaction happens mid-turn.
+            break
         case .sessionEnd:
             break
         case .taskCompleted:
@@ -123,11 +124,12 @@ public final class SessionMonitor {
     }
 
     /// The position of the event's session, adding it first if this is the
-    /// first event seen from it. For a session picked up mid-flight, `startedAt`
-    /// is when ClaudeBar first heard from it, not when it really began, and it
-    /// starts out stopped unless the event itself shows a turn underway: a
-    /// late `SubagentStop` or `TaskCompleted` says nothing about that, and
-    /// claiming "Working" would stick until the next prompt.
+    /// first event seen from it. A session that has just started sits idle at
+    /// its prompt. One picked up mid-flight starts out stopped too unless the
+    /// event itself shows a turn underway — a late `SubagentStop` or
+    /// `TaskCompleted` says nothing about that, and claiming "Working" would
+    /// stick until the next prompt — and its `startedAt` is when ClaudeBar
+    /// first heard from it, not when it really began.
     private func indexOfSession(for event: SessionEvent) -> Int {
         if let index = sessions.firstIndex(where: { $0.id == event.sessionId }) {
             return index
@@ -136,7 +138,8 @@ public final class SessionMonitor {
             id: event.sessionId,
             cwd: event.cwd,
             startedAt: event.receivedAt,
-            processId: event.processId
+            processId: event.processId,
+            phase: event.eventName == .sessionStart ? .stopped : .active
         )
         switch event.eventName {
         case .sessionStart, .userPromptSubmit, .subagentStart, .notification:

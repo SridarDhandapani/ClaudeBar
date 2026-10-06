@@ -27,17 +27,21 @@ public struct ClaudeSession: Sendable, Equatable, Identifiable {
     /// said. nil for a session whose hooks never sent one.
     public private(set) var processId: Int?
 
+    /// - Parameter phase: `.active` for a session seen mid-turn; `.stopped` for
+    ///   one that has just opened at its prompt — idle, with nothing finished
+    ///   yet, so `finishedAt` stays nil and the notch has nothing to flash.
     public init(
         id: String,
         cwd: String,
         startedAt: Date = Date(),
-        processId: Int? = nil
+        processId: Int? = nil,
+        phase: Phase = .active
     ) {
         self.id = id
         self.cwd = cwd
         self.startedAt = startedAt
         self.processId = processId
-        self.phase = .active
+        self.phase = phase
         self.activeSubagentCount = 0
         self.completedTaskCount = 0
     }
