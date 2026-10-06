@@ -81,9 +81,9 @@ struct MenuContentView: View {
                         .padding(.bottom, 16 - scrollTopInset)
                 }
 
-                // Session Indicator (shown when Claude Code is active)
-                if let session = sessionMonitor.activeSession {
-                    SessionIndicatorView(session: session)
+                // The Claude Code card (shown while any session is running)
+                if sessionMonitor.hasActiveSession {
+                    SessionsCardView(sessionMonitor: sessionMonitor)
                         .padding(.horizontal, 16)
                         .padding(.bottom, 8)
                 }

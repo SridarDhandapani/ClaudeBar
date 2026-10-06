@@ -10,6 +10,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - **Leaderboard web board**: the board scrolls inside its card so the globe is close by, the globe shows the tokens its countries total, and country names in its list are no longer cut in half. ([#503](https://github.com/tddworks/ClaudeBar/pull/503)) → [docs](https://github.com/tddworks/ClaudeBar/blob/main/docs/features/leaderboard/README.md)
 
+### Fixed
+- Every running Claude Code session is tracked, including ones started before ClaudeBar; before, only the newest one changed the status. The popover card lists each with its state, most pressing first; the menu bar follows the one that most needs you.
+- The session card names states the way the notch does — Working, Agents working, Needs you, Done — instead of Active, Needs You and Stopped.
+
 ### Added
 - **Share your rank**: Share on the Leaderboard's *Your rank* makes an image of your place, square or wide, with your name shown or masked, to copy, save or share. Drawn on your Mac; nothing is uploaded. ([#504](https://github.com/tddworks/ClaudeBar/pull/504)) → [docs](https://github.com/tddworks/ClaudeBar/blob/main/docs/features/leaderboard/README.md#share-your-rank)
 - **Oh My Pi daily usage**: today's cost and tokens, the 30-day chart and Leaderboard sharing for Oh My Pi, read from omp's own session logs — subagents and the model calls it makes outside the chat included, a forked session's copies counted once. ([#502](https://github.com/tddworks/ClaudeBar/pull/502)) → [docs](https://github.com/tddworks/ClaudeBar/blob/main/docs/providers/omp/README.md#daily-usage)

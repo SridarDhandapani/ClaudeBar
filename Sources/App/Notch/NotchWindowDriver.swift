@@ -129,7 +129,7 @@ final class NotchWindowDriver {
 
         // A session that finished ten minutes ago is history, not status. Left
         // unfiltered it would sit in the panel for the rest of the day.
-        let sessions = [sessionMonitor.activeSession].compactMap { $0 }
+        let sessions = sessionMonitor.sessions
             + sessionMonitor.recentSessions.filter { session in
                 guard let finishedAt = session.finishedAt else { return true }
                 return now.timeIntervalSince(finishedAt) < Self.recentSessionWindow

@@ -265,11 +265,17 @@ struct ClaudeBarApp: App {
                 )
             }
         case .sessionEnd:
-            let taskCount = sessionMonitor.recentSessions.first?.completedTaskCount ?? 0
-            let duration = sessionMonitor.recentSessions.first?.durationDescription ?? ""
-            let summary = taskCount > 0
-                ? "Completed \(taskCount) task\(taskCount == 1 ? "" : "s") in \(duration)"
-                : "Session ended after \(duration)"
+            // The session that just ended, not merely the newest in the list:
+            // several can be running, and one ClaudeBar never saw has no entry.
+            let ended = sessionMonitor.recentSessions.first { $0.id == event.sessionId }
+            let taskCount = ended?.completedTaskCount ?? 0
+            let summary = if let duration = ended?.durationDescription {
+                taskCount > 0
+                    ? "Completed \(taskCount) task\(taskCount == 1 ? "" : "s") in \(duration)"
+                    : "Session ended after \(duration)"
+            } else {
+                "Session ended"
+            }
             Task {
                 try? await sessionAlertSender.send(
                     title: "Claude Code Finished",

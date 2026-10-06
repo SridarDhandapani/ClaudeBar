@@ -45,13 +45,14 @@ public struct ClaudeSession: Sendable, Equatable, Identifiable {
         case stopped
         case ended
 
-        /// Human-readable label for this phase
+        /// Human-readable label for this phase: the notch's words for the
+        /// same states (docs/features/notch), so the two never disagree.
         public var label: String {
             switch self {
-            case .active: return "Active"
-            case .subagentsWorking: return "Agents Working"
-            case .awaitingInput: return "Needs You"
-            case .stopped: return "Stopped"
+            case .active: return "Working"
+            case .subagentsWorking: return "Agents working"
+            case .awaitingInput: return "Needs you"
+            case .stopped: return "Done"
             case .ended: return "Ended"
             }
         }

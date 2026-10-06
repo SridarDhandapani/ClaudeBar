@@ -336,11 +336,11 @@ struct ClaudeSessionTests {
     }
 
     @Test
-    func `should print each phase as Active, Agents Working, Needs You, Stopped or Ended`() {
-        #expect(ClaudeSession.Phase.active.label == "Active")
-        #expect(ClaudeSession.Phase.subagentsWorking.label == "Agents Working")
-        #expect(ClaudeSession.Phase.awaitingInput.label == "Needs You")
-        #expect(ClaudeSession.Phase.stopped.label == "Stopped")
+    func `should print each phase with the notch's words: Working, Agents working, Needs you, Done or Ended`() {
+        #expect(ClaudeSession.Phase.active.label == "Working")
+        #expect(ClaudeSession.Phase.subagentsWorking.label == "Agents working")
+        #expect(ClaudeSession.Phase.awaitingInput.label == "Needs you")
+        #expect(ClaudeSession.Phase.stopped.label == "Done")
         #expect(ClaudeSession.Phase.ended.label == "Ended")
     }
 }

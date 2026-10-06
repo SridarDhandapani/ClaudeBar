@@ -21,6 +21,10 @@ struct SessionMonitorTests {
         )
     }
 
+    private func session(_ id: String, in monitor: SessionMonitor) -> ClaudeSession? {
+        monitor.sessions.first { $0.id == id }
+    }
+
     // MARK: - Session Lifecycle
 
     @Test
@@ -29,6 +33,7 @@ struct SessionMonitorTests {
 
         #expect(monitor.activeSession == nil)
         #expect(monitor.hasActiveSession == false)
+        #expect(monitor.sessions.isEmpty)
         #expect(monitor.recentSessions.isEmpty)
     }
 
@@ -72,16 +77,118 @@ struct SessionMonitorTests {
         #expect(monitor.recentSessions.isEmpty)
     }
 
+    // MARK: - Several Sessions
+
     @Test
-    func `should move the previous session to recent sessions when a new one starts`() {
+    func `should keep the first session running when a second one starts`() {
         let monitor = SessionMonitor()
 
         monitor.processEvent(makeEvent(sessionId: "session-1", eventName: .sessionStart))
         monitor.processEvent(makeEvent(sessionId: "session-2", eventName: .sessionStart))
 
-        #expect(monitor.activeSession?.id == "session-2")
-        #expect(monitor.recentSessions.count == 1)
-        #expect(monitor.recentSessions.first?.id == "session-1")
+        #expect(monitor.sessions.map(\.id) == ["session-1", "session-2"])
+        #expect(monitor.recentSessions.isEmpty)
+    }
+
+    @Test
+    func `should pick up a session that was running before ClaudeBar started from its next event`() {
+        let monitor = SessionMonitor()
+
+        monitor.processEvent(makeEvent(sessionId: "older", eventName: .userPromptSubmit, cwd: "/tmp/older"))
+
+        #expect(monitor.activeSession?.id == "older")
+        #expect(monitor.activeSession?.cwd == "/tmp/older")
+        #expect(monitor.activeSession?.phase == .active)
+    }
+
+    @Test
+    func `should keep following an earlier session after a newer one starts`() {
+        let monitor = SessionMonitor()
+        monitor.processEvent(makeEvent(sessionId: "session-1", eventName: .sessionStart))
+        monitor.processEvent(makeEvent(sessionId: "session-2", eventName: .sessionStart))
+        monitor.processEvent(makeEvent(sessionId: "session-2", eventName: .stop))
+
+        monitor.processEvent(makeEvent(sessionId: "session-1", eventName: .subagentStart))
+
+        #expect(monitor.activeSession?.id == "session-1")
+        #expect(monitor.activeSession?.phase == .subagentsWorking)
+    }
+
+    @Test
+    func `should show the session that needs the person ahead of ones that are working`() {
+        let monitor = SessionMonitor()
+        monitor.processEvent(makeEvent(sessionId: "blocked", eventName: .sessionStart))
+        monitor.processEvent(makeEvent(sessionId: "blocked", eventName: .notification))
+
+        monitor.processEvent(makeEvent(sessionId: "busy", eventName: .sessionStart))
+        monitor.processEvent(makeEvent(sessionId: "busy", eventName: .subagentStart))
+
+        #expect(monitor.activeSession?.id == "blocked")
+    }
+
+    @Test
+    func `should show a working session ahead of a stopped one that spoke last`() {
+        let monitor = SessionMonitor()
+        monitor.processEvent(makeEvent(sessionId: "busy", eventName: .sessionStart))
+        monitor.processEvent(makeEvent(sessionId: "idle", eventName: .sessionStart))
+
+        monitor.processEvent(makeEvent(sessionId: "idle", eventName: .stop))
+
+        #expect(monitor.activeSession?.id == "busy")
+    }
+
+    @Test
+    func `should show the session heard from last when several are in the same phase`() {
+        let monitor = SessionMonitor()
+        let start = Date()
+        monitor.processEvent(makeEvent(sessionId: "session-1", eventName: .sessionStart, receivedAt: start))
+        monitor.processEvent(makeEvent(sessionId: "session-2", eventName: .sessionStart, receivedAt: start.addingTimeInterval(1)))
+
+        monitor.processEvent(makeEvent(sessionId: "session-1", eventName: .userPromptSubmit, receivedAt: start.addingTimeInterval(2)))
+
+        #expect(monitor.activeSession?.id == "session-1")
+    }
+
+    @Test
+    func `should keep the other sessions running when one ends`() {
+        let monitor = SessionMonitor()
+        monitor.processEvent(makeEvent(sessionId: "session-1", eventName: .sessionStart))
+        monitor.processEvent(makeEvent(sessionId: "session-2", eventName: .sessionStart))
+
+        monitor.processEvent(makeEvent(sessionId: "session-2", eventName: .sessionEnd))
+
+        #expect(monitor.activeSession?.id == "session-1")
+        #expect(monitor.recentSessions.map(\.id) == ["session-2"])
+    }
+
+    @Test
+    func `should keep a session's progress when Claude Code starts it again`() {
+        let monitor = SessionMonitor()
+        monitor.processEvent(makeEvent(eventName: .sessionStart))
+        monitor.processEvent(makeEvent(eventName: .taskCompleted))
+
+        monitor.processEvent(makeEvent(eventName: .sessionStart))
+
+        #expect(monitor.sessions.count == 1)
+        #expect(monitor.activeSession?.completedTaskCount == 1)
+        #expect(monitor.recentSessions.isEmpty)
+    }
+
+    @Test
+    func `should rank sessions by how much they need the person, then by who spoke last`() {
+        let monitor = SessionMonitor()
+        let start = Date()
+        monitor.processEvent(makeEvent(sessionId: "idle", eventName: .sessionStart, receivedAt: start))
+        monitor.processEvent(makeEvent(sessionId: "idle", eventName: .stop, receivedAt: start.addingTimeInterval(1)))
+        monitor.processEvent(makeEvent(sessionId: "active-old", eventName: .sessionStart, receivedAt: start.addingTimeInterval(2)))
+        monitor.processEvent(makeEvent(sessionId: "agents", eventName: .sessionStart, receivedAt: start.addingTimeInterval(3)))
+        monitor.processEvent(makeEvent(sessionId: "agents", eventName: .subagentStart, receivedAt: start.addingTimeInterval(4)))
+        monitor.processEvent(makeEvent(sessionId: "blocked", eventName: .sessionStart, receivedAt: start.addingTimeInterval(5)))
+        monitor.processEvent(makeEvent(sessionId: "blocked", eventName: .notification, receivedAt: start.addingTimeInterval(6)))
+        monitor.processEvent(makeEvent(sessionId: "active-new", eventName: .sessionStart, receivedAt: start.addingTimeInterval(7)))
+
+        #expect(monitor.sessionsByProminence.map(\.id) == ["blocked", "agents", "active-new", "active-old", "idle"])
+        #expect(monitor.sessions.map(\.id) == ["idle", "active-old", "agents", "blocked", "active-new"])
     }
 
     // MARK: - Task Tracking
@@ -98,22 +205,14 @@ struct SessionMonitorTests {
     }
 
     @Test
-    func `should not count a task another session finished`() {
+    func `should count a task for the session that finished it, not the others`() {
         let monitor = SessionMonitor()
 
         monitor.processEvent(makeEvent(sessionId: "session-1", eventName: .sessionStart))
         monitor.processEvent(makeEvent(sessionId: "other", eventName: .taskCompleted))
 
-        #expect(monitor.activeSession?.completedTaskCount == 0)
-    }
-
-    @Test
-    func `should show no session when a task finishes with no session running`() {
-        let monitor = SessionMonitor()
-
-        monitor.processEvent(makeEvent(eventName: .taskCompleted))
-
-        #expect(monitor.activeSession == nil)
+        #expect(session("session-1", in: monitor)?.completedTaskCount == 0)
+        #expect(session("other", in: monitor)?.completedTaskCount == 1)
     }
 
     // MARK: - Subagent Tracking
@@ -170,13 +269,14 @@ struct SessionMonitorTests {
     }
 
     @Test
-    func `should keep the session active when another session stops`() {
+    func `should stop only the session that stopped`() {
         let monitor = SessionMonitor()
 
         monitor.processEvent(makeEvent(sessionId: "session-1", eventName: .sessionStart))
         monitor.processEvent(makeEvent(sessionId: "other", eventName: .stop))
 
-        #expect(monitor.activeSession?.phase == .active)
+        #expect(session("session-1", in: monitor)?.phase == .active)
+        #expect(session("other", in: monitor)?.phase == .stopped)
     }
 
     @Test
@@ -198,7 +298,7 @@ struct SessionMonitorTests {
         monitor.processEvent(makeEvent(sessionId: "session-1", eventName: .stop))
         monitor.processEvent(makeEvent(sessionId: "other", eventName: .userPromptSubmit))
 
-        #expect(monitor.activeSession?.phase == .stopped)
+        #expect(session("session-1", in: monitor)?.phase == .stopped)
     }
 
     // MARK: - Recent Sessions
@@ -289,8 +389,8 @@ struct SessionMonitorTests {
 
         monitor.processEvent(makeEvent(sessionId: "other", eventName: .notification, message: "blocked"))
 
-        #expect(monitor.activeSession?.phase == .active)
-        #expect(monitor.activeSession?.pendingPrompt == nil)
+        #expect(session("test-session", in: monitor)?.phase == .active)
+        #expect(session("test-session", in: monitor)?.pendingPrompt == nil)
     }
 
     @Test

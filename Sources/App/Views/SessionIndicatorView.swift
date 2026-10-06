@@ -1,8 +1,8 @@
 import SwiftUI
 import Domain
 
-/// Displays the current Claude Code session status in the menu popover.
-/// Shown when there's an active session (SessionMonitor.activeSession != nil).
+/// Displays the Claude Code session's status in the menu popover.
+/// `SessionsCardView` shows it when exactly one session is running.
 struct SessionIndicatorView: View {
     let session: ClaudeSession
 
