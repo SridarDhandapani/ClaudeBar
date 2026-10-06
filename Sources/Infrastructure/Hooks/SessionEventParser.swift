@@ -5,7 +5,9 @@ import Domain
 public enum SessionEventParser {
     /// Parses raw JSON data from a hook HTTP request into a SessionEvent.
     /// Claude Code sends JSON with fields: session_id, hook_event_name, cwd, etc.
-    public static func parse(_ data: Data) -> SessionEvent? {
+    /// `processId` is the hook's `X-ClaudeBar-Pid` header: the Claude Code
+    /// process ID, or empty when the hook had none to send.
+    public static func parse(_ data: Data, processId: String? = nil) -> SessionEvent? {
         guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
             return nil
         }
@@ -25,7 +27,8 @@ public enum SessionEventParser {
             sessionId: sessionId,
             eventName: eventName,
             cwd: cwd,
-            message: message
+            message: message,
+            processId: processId.flatMap { Int($0.trimmingCharacters(in: .whitespaces)) }
         )
     }
 }

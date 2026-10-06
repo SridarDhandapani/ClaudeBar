@@ -23,18 +23,24 @@ public struct SessionEvent: Sendable, Equatable, Codable {
     /// (e.g. "Claude needs your permission to use Bash").
     public let message: String?
 
+    /// The Claude Code process the event came from, when the hook said.
+    /// Lets ClaudeBar notice a session whose process died without a `SessionEnd`.
+    public let processId: Int?
+
     public init(
         sessionId: String,
         eventName: EventName,
         cwd: String,
         receivedAt: Date = Date(),
-        message: String? = nil
+        message: String? = nil,
+        processId: Int? = nil
     ) {
         self.sessionId = sessionId
         self.eventName = eventName
         self.cwd = cwd
         self.receivedAt = receivedAt
         self.message = message
+        self.processId = processId
     }
 
     /// Whether this event must be ignored as ClaudeBar's own background probe traffic.

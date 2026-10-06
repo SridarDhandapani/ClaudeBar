@@ -1,5 +1,6 @@
 import Testing
 import Foundation
+import Mockable
 @testable import Domain
 
 @Suite
@@ -10,15 +11,24 @@ struct SessionMonitorTests {
         eventName: SessionEvent.EventName,
         cwd: String = "/tmp/project",
         receivedAt: Date = Date(),
-        message: String? = nil
+        message: String? = nil,
+        processId: Int? = nil
     ) -> SessionEvent {
         SessionEvent(
             sessionId: sessionId,
             eventName: eventName,
             cwd: cwd,
             receivedAt: receivedAt,
-            message: message
+            message: message,
+            processId: processId
         )
+    }
+
+    /// A Mac on which only the given Claude Code processes are still running.
+    private func processes(running alive: Set<Int>) -> MockProcessLiveness {
+        let liveness = MockProcessLiveness()
+        given(liveness).isRunning(processId: .any).willProduce { alive.contains($0) }
+        return liveness
     }
 
     private func session(_ id: String, in monitor: SessionMonitor) -> ClaudeSession? {
@@ -207,6 +217,46 @@ struct SessionMonitorTests {
 
         #expect(monitor.sessionsByProminence.map(\.id) == ["blocked", "agents", "active-new", "active-old", "idle"])
         #expect(monitor.sessions.map(\.id) == ["idle", "active-old", "agents", "blocked", "active-new"])
+    }
+
+    // MARK: - Sessions whose Claude Code process is gone
+
+    @Test
+    func `should end a session whose Claude Code process is gone, keeping the ones still running`() {
+        let monitor = SessionMonitor()
+        let start = Date()
+        monitor.processEvent(makeEvent(sessionId: "alive", eventName: .sessionStart, receivedAt: start, processId: 100))
+        monitor.processEvent(makeEvent(sessionId: "killed", eventName: .sessionStart, receivedAt: start, processId: 200))
+
+        let now = start.addingTimeInterval(60)
+        monitor.endSessionsWhoseProcessIsGone(according: processes(running: [100]), at: now)
+
+        #expect(monitor.sessions.map(\.id) == ["alive"])
+        #expect(monitor.recentSessions.map(\.id) == ["killed"])
+        #expect(monitor.recentSessions.first?.phase == .ended)
+        #expect(monitor.recentSessions.first?.endedAt == now)
+    }
+
+    @Test
+    func `should keep a session that never said which process it runs in`() {
+        let monitor = SessionMonitor()
+        monitor.processEvent(makeEvent(sessionId: "unknown-pid", eventName: .sessionStart))
+
+        monitor.endSessionsWhoseProcessIsGone(according: processes(running: []), at: Date())
+
+        #expect(monitor.sessions.map(\.id) == ["unknown-pid"])
+    }
+
+    @Test
+    func `should learn a session's process from a later event when the first one had none`() {
+        let monitor = SessionMonitor()
+        monitor.processEvent(makeEvent(eventName: .sessionStart))
+        monitor.processEvent(makeEvent(eventName: .userPromptSubmit, processId: 300))
+
+        monitor.endSessionsWhoseProcessIsGone(according: processes(running: []), at: Date())
+
+        #expect(monitor.sessions.isEmpty)
+        #expect(monitor.recentSessions.first?.processId == 300)
     }
 
     // MARK: - Task Tracking

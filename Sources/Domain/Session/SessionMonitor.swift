@@ -42,6 +42,9 @@ public final class SessionMonitor {
 
         let index = indexOfSession(for: event)
         lastEventAt[event.sessionId] = event.receivedAt
+        if let processId = event.processId, sessions[index].processId == nil {
+            sessions[index].runs(inProcess: processId)
+        }
 
         switch event.eventName {
         case .sessionStart:
@@ -62,6 +65,19 @@ public final class SessionMonitor {
             sessions[index].resume()
         case .notification:
             sessions[index].awaitInput(event.message, at: event.receivedAt)
+        }
+    }
+
+    /// Ends every session whose Claude Code process no longer exists: it was
+    /// killed without a `SessionEnd`, so nothing else will ever end it. A
+    /// session that never said which process it runs in is left alone.
+    public func endSessionsWhoseProcessIsGone(according liveness: ProcessLiveness, at date: Date) {
+        let gone = sessions.filter { session in
+            guard let processId = session.processId else { return false }
+            return !liveness.isRunning(processId: processId)
+        }
+        for session in gone {
+            endSession(session.id, at: date)
         }
     }
 
@@ -119,7 +135,8 @@ public final class SessionMonitor {
         var session = ClaudeSession(
             id: event.sessionId,
             cwd: event.cwd,
-            startedAt: event.receivedAt
+            startedAt: event.receivedAt,
+            processId: event.processId
         )
         switch event.eventName {
         case .sessionStart, .userPromptSubmit, .subagentStart, .notification:

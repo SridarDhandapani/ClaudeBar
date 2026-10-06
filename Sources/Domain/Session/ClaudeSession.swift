@@ -23,14 +23,20 @@ public struct ClaudeSession: Sendable, Equatable, Identifiable {
     /// (e.g. "Claude needs your permission to use Bash"). Cleared when work resumes.
     public private(set) var pendingPrompt: String?
 
+    /// The Claude Code process running this session, once a hook event has
+    /// said. nil for a session whose hooks never sent one.
+    public private(set) var processId: Int?
+
     public init(
         id: String,
         cwd: String,
-        startedAt: Date = Date()
+        startedAt: Date = Date(),
+        processId: Int? = nil
     ) {
         self.id = id
         self.cwd = cwd
         self.startedAt = startedAt
+        self.processId = processId
         self.phase = .active
         self.activeSubagentCount = 0
         self.completedTaskCount = 0
@@ -59,6 +65,11 @@ public struct ClaudeSession: Sendable, Equatable, Identifiable {
     }
 
     // MARK: - Mutations
+
+    /// Records which process runs this session, when a later event says.
+    public mutating func runs(inProcess processId: Int) {
+        self.processId = processId
+    }
 
     /// Records a subagent starting work. Subagent activity also revives a
     /// `.stopped` session: a new turn is clearly underway, so the indicator

@@ -19,6 +19,11 @@ struct HookInstallerTests {
     }
 
     @Test
+    func `should tell ClaudeBar which Claude Code process sent the event, so it can notice when it is gone`() {
+        #expect(HookInstaller.hookCommand.contains("-H \"\(HookConstants.processIdHeader): $CLAUDE_PID\""))
+    }
+
+    @Test
     func `should find ClaudeBar's port in the file ClaudeBar leaves for it`() {
         #expect(HookInstaller.hookCommand.contains("claudebar-hook-port"))
     }

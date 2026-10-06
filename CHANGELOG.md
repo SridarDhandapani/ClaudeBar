@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The session card names states the way the notch does — Working, Agents working, Needs you, Done — instead of Active, Needs You and Stopped.
 - A session no longer flips back to Working when Claude Code reports a subagent stopping a moment after the turn ended; it stays Done until your next prompt.
 - A session whose turn ended in an error (the connection dropped while the Mac slept, say) now shows Done instead of staying on Working: ClaudeBar listens to Claude Code's `StopFailure` hook.
+- A Claude Code session that was killed without ending cleanly (a crash, a closed terminal) is dropped within 30 seconds instead of staying until ClaudeBar restarts.
 
 ### Added
 - **Share your rank**: Share on the Leaderboard's *Your rank* makes an image of your place, square or wide, with your name shown or masked, to copy, save or share. Drawn on your Mac; nothing is uploaded. ([#504](https://github.com/tddworks/ClaudeBar/pull/504)) → [docs](https://github.com/tddworks/ClaudeBar/blob/main/docs/features/leaderboard/README.md#share-your-rank)

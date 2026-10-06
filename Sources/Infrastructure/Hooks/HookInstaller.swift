@@ -18,8 +18,11 @@ public enum HookInstaller {
     /// Sessions ClaudeBar spawns itself (quota probes) carry `CLAUDEBAR_PROBE=1`,
     /// so the guard returns before the curl POST — a background quota poll must
     /// not loop back through the user's hooks as a Claude session (#222).
+    ///
+    /// Claude Code exports its process ID to hooks as `CLAUDE_PID`; the POST
+    /// carries it in a header so ClaudeBar can notice when the process is gone.
     static let hookCommand = """
-    __claudebar_hook() { [ "$\(HookConstants.probeEnvironmentKey)" = "1" ] && return 0; PORT=$(cat "$HOME/.claude/claudebar-hook-port" 2>/dev/null || echo \(HookConstants.defaultPort)); cat | curl -s -X POST "http://localhost:${PORT}/hook" -H 'Content-Type: application/json' -d @- > /dev/null 2>&1 & }; __claudebar_hook
+    __claudebar_hook() { [ "$\(HookConstants.probeEnvironmentKey)" = "1" ] && return 0; PORT=$(cat "$HOME/.claude/claudebar-hook-port" 2>/dev/null || echo \(HookConstants.defaultPort)); cat | curl -s -X POST "http://localhost:${PORT}/hook" -H 'Content-Type: application/json' -H "\(HookConstants.processIdHeader): $CLAUDE_PID" -d @- > /dev/null 2>&1 & }; __claudebar_hook
     """
 
     /// The event names to register hooks for

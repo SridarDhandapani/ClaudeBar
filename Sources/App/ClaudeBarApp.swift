@@ -63,6 +63,10 @@ struct ClaudeBarApp: App {
 
     /// Task for the hook server event loop (allows cancellation on toggle off)
     @State private var hookServerTask: Task<Void, Never>?
+    @State private var sessionSweepTask: Task<Void, Never>?
+
+    /// How often ClaudeBar checks that each session's Claude Code process still exists.
+    private static let sessionSweepInterval: Duration = .seconds(30)
 
     /// Alerts users when quota status degrades
     private let quotaAlerter = NotificationAlerter(accountSettings: JSONSettingsRepository.shared)
@@ -228,6 +232,17 @@ struct ClaudeBarApp: App {
         hookServerTask?.cancel()
         hookServer.stop()
 
+        // A session killed without a SessionEnd would otherwise stay forever.
+        sessionSweepTask?.cancel()
+        sessionSweepTask = Task {
+            let liveness = SystemProcessLiveness()
+            while !Task.isCancelled {
+                try? await Task.sleep(for: Self.sessionSweepInterval)
+                guard !Task.isCancelled else { break }
+                sessionMonitor.endSessionsWhoseProcessIsGone(according: liveness, at: Date())
+            }
+        }
+
         hookServerTask = Task {
             do {
                 let events = try await hookServer.start()
@@ -247,6 +262,8 @@ struct ClaudeBarApp: App {
     }
 
     func stopHookServer() {
+        sessionSweepTask?.cancel()
+        sessionSweepTask = nil
         hookServerTask?.cancel()
         hookServerTask = nil
         hookServer.stop()

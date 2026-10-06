@@ -13,6 +13,11 @@ public enum HookConstants {
     /// and exits without POSTing, so a background quota poll can't loop back
     /// through the user's hooks as a Claude session (#222).
     public static let probeEnvironmentKey = "CLAUDEBAR_PROBE"
+
+    /// HTTP header the installed hook command sends with the Claude Code
+    /// process ID (Claude Code exports it to hooks as `CLAUDE_PID`). ClaudeBar
+    /// uses it to notice a session whose process died without a `SessionEnd`.
+    public static let processIdHeader = "X-ClaudeBar-Pid"
 }
 
 /// Settings repository for hook configuration.

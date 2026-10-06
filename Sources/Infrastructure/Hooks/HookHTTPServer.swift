@@ -142,11 +142,23 @@ public final class HookHTTPServer: @unchecked Sendable {
         let bodyString = rawString[separatorRange.upperBound...]
         guard let bodyData = bodyString.data(using: .utf8) else { return }
 
-        if let event = SessionEventParser.parse(bodyData) {
+        let processId = headerValue(HookConstants.processIdHeader, in: headerPart)
+        if let event = SessionEventParser.parse(bodyData, processId: processId) {
             AppLog.hooks.info("Received hook event: \(event.eventName.rawValue) for session \(event.sessionId)")
             continuation?.yield(event)
         } else {
             AppLog.hooks.warning("Failed to parse hook event payload")
         }
+    }
+
+    /// The value of the first header called `name` (header names are case-insensitive).
+    private func headerValue(_ name: String, in headers: Substring) -> String? {
+        for line in headers.split(separator: "\r\n").dropFirst() {
+            guard let colon = line.firstIndex(of: ":") else { continue }
+            if line[..<colon].caseInsensitiveCompare(name) == .orderedSame {
+                return line[line.index(after: colon)...].trimmingCharacters(in: .whitespaces)
+            }
+        }
+        return nil
     }
 }
